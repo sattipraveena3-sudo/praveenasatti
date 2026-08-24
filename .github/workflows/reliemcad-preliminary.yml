@@ -1,0 +1,87 @@
+name: ReliEMCAD Preliminary Stress Test
+
+on:
+  push:
+    branches: [emcad-screening]
+    paths:
+      - "screening/emcad/run_reliemcad_preliminary.py"
+      - ".github/workflows/reliemcad-preliminary.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "screening/emcad/run_reliemcad_preliminary.py"
+      - ".github/workflows/reliemcad-preliminary.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  preliminary-stress-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout screening branch
+        uses: actions/checkout@v4
+        with:
+          ref: emcad-screening
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "numpy<2" scipy h5py medpy gdown
+          pip install torch==2.2.2 torchvision==0.17.2 --index-url https://download.pytorch.org/whl/cpu
+          pip install timm==0.9.16 einops
+
+      - name: Clone official EMCAD repository
+        run: |
+          git clone --depth 1 https://github.com/SLDGroup/EMCAD.git emcad-official
+
+      - name: Download public Synapse data
+        run: |
+          mkdir -p downloads/synapse
+          gdown 1wvmw8DVyDKr5sOAFn5zUpfhbK4Vxjze4 -O downloads/synapse_archive
+          7z x -y downloads/synapse_archive -odownloads/synapse
+
+      - name: Download released Synapse checkpoint
+        run: |
+          mkdir -p downloads/weights
+          gdown --folder "https://drive.google.com/drive/folders/1S-hxcgMlTFEX9GJGTUF7XWdZBGx7MiZl?usp=sharing" -O downloads/weights
+
+      - name: Run preliminary clean-vs-shift experiment
+        run: |
+          mkdir -p proposal/preliminary_results
+          set -o pipefail
+          python screening/emcad/run_reliemcad_preliminary.py \
+            --emcad-root emcad-official \
+            --data-search downloads/synapse \
+            --weights-root downloads/weights \
+            --output proposal/preliminary_results \
+            --batch-size 8 \
+            --gamma 1.8 \
+            --case-index 0 \
+            2>&1 | tee proposal/preliminary_results/execution.log
+
+      - name: Upload preliminary evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ReliEMCAD-Preliminary-Evidence
+          path: proposal/preliminary_results/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Commit preliminary measured results
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add proposal/preliminary_results
+          git diff --cached --quiet && exit 0
+          git commit -m "Record ReliEMCAD preliminary domain-shift results"
+          git push origin emcad-screening
