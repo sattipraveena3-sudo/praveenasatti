@@ -29,8 +29,8 @@ SLICE_PILOT {
   "clean_present_class_mean_dice": 0.917717863849558,
   "shifted_present_class_mean_dice": 0.9017257864542456,
   "dice_delta_shift_minus_clean": -0.015992077395312387,
-  "clean_predictive_entropy": 0.024612070992588997,
-  "shifted_predictive_entropy": 0.032756805419921875,
+  "clean_predictive_entropy": 0.024612074717879295,
+  "shifted_predictive_entropy": 0.03275680914521217,
   "entropy_delta_shift_minus_clean": 0.008144734427332878,
   "clean_vs_shift_present_class_stability_dice": 0.9577111802525604,
   "per_class": [
@@ -71,6 +71,6 @@ SLICE_PILOT {
       "prediction_stability_dice": 0.9634146341463414
     }
   ],
-  "elapsed_seconds": 0.41,
+  "elapsed_seconds": 0.31,
   "guardrail": "Pilot slice only; not a volume-level or benchmark-level result and not evidence of adaptation gain."
 }
