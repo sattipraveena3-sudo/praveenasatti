@@ -4,12 +4,12 @@ on:
   push:
     branches: [emcad-screening]
     paths:
-      - "screening/emcad/**"
+      - "screening/emcad/run_emcad_cpu*.py"
       - ".github/workflows/emcad-screening.yml"
   pull_request:
     branches: [main]
     paths:
-      - "screening/emcad/**"
+      - "screening/emcad/run_emcad_cpu*.py"
       - ".github/workflows/emcad-screening.yml"
   workflow_dispatch:
 
@@ -69,11 +69,12 @@ jobs:
         run: |
           mkdir -p screening/emcad/results
           set -o pipefail
-          python screening/emcad/run_emcad_cpu.py \
+          python screening/emcad/run_emcad_cpu_fast.py \
             --emcad-root emcad-official \
             --data-search downloads/synapse \
             --weights-root downloads/weights \
             --output screening/emcad/results \
+            --batch-size 12 \
             2>&1 | tee screening/emcad/results/execution.log
 
       - name: Add environment evidence
