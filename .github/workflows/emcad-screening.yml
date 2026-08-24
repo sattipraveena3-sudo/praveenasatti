@@ -52,7 +52,7 @@ jobs:
       - name: Download public preprocessed Synapse data
         run: |
           mkdir -p downloads/synapse
-          gdown --id 1wvmw8DVyDKr5sOAFn5zUpfhbK4Vxjze4 -O downloads/synapse_archive
+          gdown 1wvmw8DVyDKr5sOAFn5zUpfhbK4Vxjze4 -O downloads/synapse_archive
           file downloads/synapse_archive
           7z x -y downloads/synapse_archive -odownloads/synapse
           echo "Synapse test-volume candidates:"
@@ -79,6 +79,7 @@ jobs:
       - name: Add environment evidence
         if: always()
         run: |
+          mkdir -p screening/emcad/results
           {
             echo "UTC run time: $(date -u --iso-8601=seconds)"
             echo "Runner OS: $RUNNER_OS"
