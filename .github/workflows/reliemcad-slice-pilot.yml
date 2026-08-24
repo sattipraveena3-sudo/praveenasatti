@@ -1,0 +1,74 @@
+name: ReliEMCAD Slice Pilot
+
+on:
+  push:
+    branches: [emcad-screening]
+    paths:
+      - "screening/emcad/run_reliemcad_slice_pilot.py"
+      - ".github/workflows/reliemcad-slice-pilot.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "screening/emcad/run_reliemcad_slice_pilot.py"
+      - ".github/workflows/reliemcad-slice-pilot.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  slice-pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: emcad-screening
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "numpy<2" scipy h5py gdown
+          pip install torch==2.2.2 torchvision==0.17.2 --index-url https://download.pytorch.org/whl/cpu
+          pip install timm==0.9.16 einops
+      - name: Clone official EMCAD
+        run: git clone --depth 1 https://github.com/SLDGroup/EMCAD.git emcad-official
+      - name: Download Synapse data
+        run: |
+          mkdir -p downloads/synapse
+          gdown 1wvmw8DVyDKr5sOAFn5zUpfhbK4Vxjze4 -O downloads/synapse_archive
+          7z x -y downloads/synapse_archive -odownloads/synapse
+      - name: Download released checkpoint
+        run: |
+          mkdir -p downloads/weights
+          gdown --folder "https://drive.google.com/drive/folders/1S-hxcgMlTFEX9GJGTUF7XWdZBGx7MiZl?usp=sharing" -O downloads/weights
+      - name: Run slice pilot
+        run: |
+          mkdir -p proposal/slice_pilot
+          set -o pipefail
+          python screening/emcad/run_reliemcad_slice_pilot.py \
+            --emcad-root emcad-official \
+            --data-search downloads/synapse \
+            --weights-root downloads/weights \
+            --output proposal/slice_pilot \
+            --gamma 1.8 \
+            2>&1 | tee proposal/slice_pilot/execution.log
+      - name: Upload pilot evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ReliEMCAD-Slice-Pilot
+          path: proposal/slice_pilot/
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Commit pilot result
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add proposal/slice_pilot
+          git diff --cached --quiet && exit 0
+          git commit -m "Record ReliEMCAD slice pilot result"
+          git push origin emcad-screening
