@@ -1,0 +1,62 @@
+{
+  "experiment": "ReliEMCAD single-slice pilot",
+  "scope": "one automatically selected high-foreground slice; preliminary evidence only",
+  "case": "case0008",
+  "slice_index": 127,
+  "foreground_pixels": 44652,
+  "present_classes": [
+    "spleen",
+    "liver",
+    "stomach",
+    "aorta"
+  ],
+  "gamma": 1.8,
+  "checkpoint_sha256": "eba3d7ab1b07db87bb9c59c16d6651df86927aaac705b0a2f97440f8d61b3bcc",
+  "clean_present_class_mean_dice": 0.917717863849558,
+  "shifted_present_class_mean_dice": 0.9017257864542456,
+  "dice_delta_shift_minus_clean": -0.015992077395312387,
+  "clean_predictive_entropy": 0.024612070992588997,
+  "shifted_predictive_entropy": 0.032756805419921875,
+  "entropy_delta_shift_minus_clean": 0.008144734427332878,
+  "clean_vs_shift_present_class_stability_dice": 0.9577111802525604,
+  "per_class": [
+    {
+      "class_id": 1,
+      "class_name": "spleen",
+      "clean_dice": 0.9341508081853651,
+      "shift_dice": 0.9321628092577813,
+      "clean_iou": 0.8764380696249813,
+      "shift_iou": 0.8729446935724963,
+      "prediction_stability_dice": 0.9857666410977585
+    },
+    {
+      "class_id": 6,
+      "class_name": "liver",
+      "clean_dice": 0.9615443920189966,
+      "shift_dice": 0.932542101042502,
+      "clean_iou": 0.9259369246302785,
+      "shift_iou": 0.8736101929202477,
+      "prediction_stability_dice": 0.957752040010529
+    },
+    {
+      "class_id": 7,
+      "class_name": "stomach",
+      "clean_dice": 0.8719504487422576,
+      "shift_dice": 0.8160237388724035,
+      "clean_iou": 0.7729717615419095,
+      "shift_iou": 0.6892230576441103,
+      "prediction_stability_dice": 0.9239114057556125
+    },
+    {
+      "class_id": 8,
+      "class_name": "aorta",
+      "clean_dice": 0.9032258064516129,
+      "shift_dice": 0.9261744966442953,
+      "clean_iou": 0.8235294117647058,
+      "shift_iou": 0.8625,
+      "prediction_stability_dice": 0.9634146341463414
+    }
+  ],
+  "elapsed_seconds": 0.41,
+  "guardrail": "Pilot slice only; not a volume-level or benchmark-level result and not evidence of adaptation gain."
+}
