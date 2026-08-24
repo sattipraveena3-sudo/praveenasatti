@@ -5,11 +5,13 @@ on:
     branches: [emcad-screening]
     paths:
       - "screening/emcad/run_emcad_cpu*.py"
+      - "screening/emcad/generate_step1_pdf.py"
       - ".github/workflows/emcad-screening.yml"
   pull_request:
     branches: [main]
     paths:
       - "screening/emcad/run_emcad_cpu*.py"
+      - "screening/emcad/generate_step1_pdf.py"
       - ".github/workflows/emcad-screening.yml"
   workflow_dispatch:
 
@@ -40,7 +42,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install "numpy<2" scipy h5py medpy pandas gdown
+          pip install "numpy<2" scipy h5py medpy pandas gdown reportlab
           pip install torch==2.2.2 torchvision==0.17.2 --index-url https://download.pytorch.org/whl/cpu
           pip install timm==0.9.16 einops
 
@@ -76,6 +78,13 @@ jobs:
             --output screening/emcad/results \
             --batch-size 12 \
             2>&1 | tee screening/emcad/results/execution.log
+
+      - name: Generate final Step 1 PDF
+        run: |
+          python screening/emcad/generate_step1_pdf.py \
+            --metrics screening/emcad/results/metrics.json \
+            --output screening/emcad/results/STEP1_EMCAD_REPORT.pdf
+          pdfinfo screening/emcad/results/STEP1_EMCAD_REPORT.pdf | tee screening/emcad/results/pdfinfo.txt
 
       - name: Add environment evidence
         if: always()
