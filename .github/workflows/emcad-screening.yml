@@ -1,0 +1,128 @@
+name: EMCAD Screening Reproduction
+
+on:
+  push:
+    branches: [emcad-screening]
+    paths:
+      - "screening/emcad/run_emcad_cpu*.py"
+      - "screening/emcad/generate_step1_pdf.py"
+      - ".github/workflows/emcad-screening.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "screening/emcad/run_emcad_cpu*.py"
+      - "screening/emcad/generate_step1_pdf.py"
+      - ".github/workflows/emcad-screening.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  reproduce-emcad:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+
+    steps:
+      - name: Checkout screening branch
+        uses: actions/checkout@v4
+        with:
+          ref: emcad-screening
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install system tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y p7zip-full
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "numpy<2" scipy h5py medpy pandas gdown reportlab
+          pip install torch==2.2.2 torchvision==0.17.2 --index-url https://download.pytorch.org/whl/cpu
+          pip install timm==0.9.16 einops
+
+      - name: Clone official EMCAD repository
+        run: |
+          git clone --depth 1 https://github.com/SLDGroup/EMCAD.git emcad-official
+          git -C emcad-official rev-parse HEAD | tee screening/emcad/official_commit.txt
+
+      - name: Download public preprocessed Synapse data
+        run: |
+          mkdir -p downloads/synapse
+          gdown 1wvmw8DVyDKr5sOAFn5zUpfhbK4Vxjze4 -O downloads/synapse_archive
+          file downloads/synapse_archive
+          7z x -y downloads/synapse_archive -odownloads/synapse
+          echo "Synapse test-volume candidates:"
+          find downloads/synapse -name '*.npy.h5' | head -30
+
+      - name: Download authors' released Synapse trained weights
+        run: |
+          mkdir -p downloads/weights
+          gdown --folder "https://drive.google.com/drive/folders/1S-hxcgMlTFEX9GJGTUF7XWdZBGx7MiZl?usp=sharing" -O downloads/weights
+          echo "Checkpoint candidates:"
+          find downloads/weights -type f \( -name '*.pth' -o -name '*.pt' \) -print
+
+      - name: Run genuine checkpoint verification
+        run: |
+          mkdir -p screening/emcad/results
+          set -o pipefail
+          python screening/emcad/run_emcad_cpu_fast.py \
+            --emcad-root emcad-official \
+            --data-search downloads/synapse \
+            --weights-root downloads/weights \
+            --output screening/emcad/results \
+            --batch-size 12 \
+            2>&1 | tee screening/emcad/results/execution.log
+
+      - name: Generate final Step 1 PDF
+        run: |
+          python screening/emcad/generate_step1_pdf.py \
+            --metrics screening/emcad/results/metrics.json \
+            --output screening/emcad/results/STEP1_EMCAD_REPORT.pdf
+          pdfinfo screening/emcad/results/STEP1_EMCAD_REPORT.pdf | tee screening/emcad/results/pdfinfo.txt
+
+      - name: Add environment evidence
+        if: always()
+        run: |
+          mkdir -p screening/emcad/results
+          {
+            echo "UTC run time: $(date -u --iso-8601=seconds)"
+            echo "Runner OS: $RUNNER_OS"
+            echo "Python: $(python --version 2>&1)"
+            python - <<'PY'
+          import platform
+          try:
+              import torch
+              print('PyTorch:', torch.__version__)
+              print('CUDA available:', torch.cuda.is_available())
+          except Exception as e:
+              print('PyTorch check failed:', e)
+          print('Platform:', platform.platform())
+          PY
+          } > screening/emcad/results/environment.txt
+
+      - name: Upload screening evidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: EMCAD-Synapse-Screening-Evidence
+          path: |
+            screening/emcad/results/
+            screening/emcad/official_commit.txt
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Commit measured results to screening branch
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add screening/emcad/results screening/emcad/official_commit.txt
+          git diff --cached --quiet && exit 0
+          git commit -m "Record genuine EMCAD Synapse screening results"
+          git push origin emcad-screening
