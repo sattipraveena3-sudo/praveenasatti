@@ -71,8 +71,7 @@ def smoke_qwen(browser):
 def smoke_internvl(browser):
     page = browser.new_page(viewport={"width": 1440, "height": 1000})
     urls = [
-        "https://internvl.opengvlab.com/",
-        "https://opengvlab-internvl.hf.space/",
+        "https://bert-ka-internvl-8b-demo.hf.space/",
         "https://developer0hye-internvl3-8b.hf.space/",
     ]
     last = None
